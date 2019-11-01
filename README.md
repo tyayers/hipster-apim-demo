@@ -1,5 +1,12 @@
 # Hipster API Demo
 
+This is a fork of the original Hipster APIM demo with the following changes:
+
+- Simplified microservices, reduced to 4 to reduce deployment footprint
+- Removed gRPC communication, replaced with HTTP
+- Replaced the manually installed Istio with the GKE Add-On Istio (in beta)
+- Removed Jaeger logging, replaced with Stackdriver
+
 ## Install
 
 #### Tool Prerequisites
@@ -19,9 +26,9 @@ export CLUSTER_NAME=my-cluster
 
 #### Download the repo
 ```
-export HIPSTER_VERSION=1.1.0
+export HIPSTER_VERSION=1.3.0
 
-mkdir -p hipster-apim-demo && cd hipster-apim-demo && curl -L https://github.com/mukundha/hipster-apim-demo/archive/$HIPSTER_VERSION.tar.gz | tar xvz --strip-components=1
+mkdir -p hipster-apim-demo && cd hipster-apim-demo && curl -L https://github.com/tyayers/hipster-apim-demo/archive/$HIPSTER_VERSION.tar.gz | tar xvz --strip-components=1
 ```
 
 ##### Setup GKE
@@ -35,63 +42,23 @@ gcloud container clusters create ${CLUSTER_NAME} \
     --enable-autoscaling --min-nodes 1 --max-nodes 10 \
     --cluster-version=1.13 \
     --zone=${ZONE} \
+    --addons=Istio --istio-config=auth=MTLS_PERMISSIVE \
+    --enable-stackdriver-kubernetes \
     --no-enable-legacy-authorization
-
-gcloud container clusters get-credentials ${CLUSTER_NAME} --zone=${ZONE}
-
-kubectl create clusterrolebinding cluster-admin-binding \
-  --clusterrole=cluster-admin \
-  --user="$(gcloud config get-value core/account)"
-
-```
-
-
-##### Install Istio
-```
-curl -L https://git.io/getLatestIstio | ISTIO_VERSION=1.1.7 sh -
-
-cd istio-1.1.7
-
-for i in install/kubernetes/helm/istio-init/files/crd*yaml; do kubectl apply -f $i; done
-
-kubectl apply -f install/kubernetes/istio-demo.yaml
-
-#wait for pods to be running / completed, takes about a minute or two
-watch kubectl get pods -n istio-system
-
-cd ..
-
-```
-
-##### Prepare for Demo (Required only for this demo)
-```
-gcloud compute disks create --size=1GB --zone=${ZONE} istio-disk
-
-kubectl apply -f demo/setup-persistent-disk.yaml
-
-watch kubectl get job setup-persistent-disk
-#wait for the job to complete
-
-kubectl delete -f demo/setup-persistent-disk.yaml
-
-#update the sidecar injector to mount the gce disk created earlier to side car proxies
-kubectl apply -f demo/istio-sidecar-injector.yaml
-
-kubectl label namespace default istio-injection=enabled
 
 ```
 
 #### Install Hispter
 ```
-kubectl apply -f demo/istio-manifests.yaml
+kubectl apply -f istio-manifests/istio-gateways.yaml
 
-kubectl apply -f demo/kubernetes-manifests.yaml
+kubectl apply -f kubernetes-manifests/currencyservice.yaml
+kubectl apply -f kubernetes-manifests/productcatalogservice.yaml
+kubectl apply -f kubernetes-manifests/recommendationservice.yaml
+kubectl apply -f kubernetes-manifests/frontend.yaml
 
 #wait for pods to be running , takes about a minute
 watch kubectl get pods
-
-#filter for grpc-transcoding
-kubectl apply -f demo/filter.yaml
 
 ```
 
@@ -100,18 +67,17 @@ kubectl apply -f demo/filter.yaml
 ```
 export GATEWAY_URL=http://$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 
-#Get Ads
-curl $GATEWAY_URL/ads
-
 #Get Recommendations
-curl $GATEWAY_URL/recommendations/1
+curl $GATEWAY_URL/recommendationservice/recommendations/OLJCESPC7Z
 
 #Get Currencies
-curl $GATEWAY_URL/currencies
+curl $GATEWAY_URL/currencyservice/currencies
 
 #Get List of Products
-curl $GATEWAY_URL/products
+curl $GATEWAY_URL/productcatalogservice/products
 
+#Open Hipster Frontend in web browser
+Copy the IP address returned as GATEWAY_URL and copy into any web browser URL field
 ```
 Explore the API endpoints in folder `specs/demo.http.swagger.json`
 
@@ -140,10 +106,10 @@ cd ..
 
 #### Enable API Key based Authentication
 ```
-kubectl apply -f demo/rule.yaml
+kubectl apply -f istio-manifests/rule.yaml
 
 #Get List of Products or other URLs to get ads, or currencies we used earlier
-curl $GATEWAY_URL/products
+curl $GATEWAY_URL/productcatalogservice/products
 
 #The above will fail with HTTP 403
 ```
@@ -197,46 +163,4 @@ cartservice.default.svc.cluster.local
 
 ### KNOWN ISSUES
 
-### 1, Transcoding Not working
-When you invoke `curl $GATEWAY_URL/ads` or other URLs, you get a errors like
-- `GET without QUERY`
-- `unable to connect upstream`
-indicate the filter is not applied correctly or the disk volume containing the proto descriptor is not mounted correctly.
-
-##### Check Disk Volume mounted correctly
-Try this on one of the pods, ads or currency or products and make sure the `gce` folder exists
-```
-kubectl exec -it <pod-name> sh -c istio-proxy
-ls gce
-```
-If `gce` is not present, there could be a volume mount issue or sidecar injector not applied correctly
-
-##### Check Filter is applied correctly
-```
-kubectl port-forward <pod> 15000
-```
-Open localhost:15000 on your browser and searchh for grpc.transcoder, you should find filter configurations, if not filter is not configured correctly.
-
-For both the above cases, try the following
-```
-kubectl label namespace default istio-injection-
-
-kubectl apply -f demo/istio-sidecar-injector.yaml
-
-kubectl label namespace default istio-injection=enabled
-
-kubectl delete -f demo/kubernetes-manifests.yaml
-
-kubectl apply -f demo/kubernetes-manifests.yaml
-
-#wait for pods to be running , takes about a minute
-watch kubectl get pods
-
-#filter for grpc-transcoding
-kubectl apply -f demo/filter.yaml
-
-```
-
-### 2, API Key verification not working for Recommendations service
-This is a known issue, looks like path matching is failing, pls use other services for demo
 
