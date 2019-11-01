@@ -25,45 +25,38 @@ spec:
   http:
   - match:
     - uri: 
-        prefix: "/products"
-    route:
-    - destination:
-        host: productcatalogservice
-        port:
-          number: 3550       
-  - match:
-    - uri: 
-        prefix: "/currencies"
+        prefix: "/currencyservice"
     route:
     - destination:
         host: currencyservice
         port:
-          number: 7000  
+          number: 8080
   - match:
     - uri: 
-        prefix: "/ads"
+        prefix: "/productcatalogservice"
     route:
     - destination:
-        host: adservice
+        host: productcatalogservice
         port:
-          number: 9555    
+          number: 8080      
   - match:
     - uri: 
-        prefix: "/carts"
-    route:
-    - destination:
-        host: cartservice
-        port:
-          number: 7070    
-  - match:
-    - uri: 
-        prefix: "/recommendations"
+        prefix: "/recommendationservice"
     route:
     - destination:
         host: recommendationservice
         port:
-          number: 8080    
-
+          number: 8080        
+  - match:
+    - uri: 
+        prefix: "/"               
+    # rewrite:
+    #   uri: "/"        
+    route:
+    - destination:
+        host: frontend
+        port:
+          number: 8080                 
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: ServiceEntry
@@ -97,4 +90,3 @@ spec:
   - number: 443
     name: https
     protocol: HTTPS
----                                 

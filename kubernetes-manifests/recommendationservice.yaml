@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recommendationservice
+spec:
+  selector:
+    matchLabels:
+      app: recommendationservice
+  template:
+    metadata:
+      labels:
+        app: recommendationservice
+    spec:
+      terminationGracePeriodSeconds: 6
+      containers:
+      - name: server
+        image: eu.gcr.io/apigee-quest-v2/recommendationservice:latest
+        imagePullPolicy: Always
+        ports:
+          - name: http
+            containerPort: 8080
+        env:
+        - name: PORT
+          value: "8080"
+        - name: PRODUCT_SVC_URL
+          value: "http://productcatalogservice:8080/productcatalogservice"
+        # - name: PRODUCT_KEY
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: hipster-secrets
+        #       key: PRODUCT_KEY
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: recommendationservice
+  labels:
+    app: recommendationservice
+spec:
+  ports:
+  - port: 8080
+    name: http
+  selector:
+    app: recommendationservice

@@ -9,7 +9,7 @@ metadata:
   name: secure-products-rule
   namespace: istio-system
 spec:
-  match: context.reporter.kind == "inbound" && destination.namespace == "default" && destination.labels["app"] == "productcatalogservice" 
+  match: context.reporter.kind == "inbound" && destination.labels["app"] == "productcatalogservice"
   actions:
   - handler: apigee-handler
     instances:
@@ -23,7 +23,7 @@ metadata:
   name: secure-currencies-rule
   namespace: istio-system
 spec:
-  match: context.reporter.kind == "inbound" && destination.namespace == "default" && destination.labels["app"] == "currencyservice" 
+  match: context.reporter.kind == "inbound" && destination.labels["app"] == "currencyservice"
   actions:
   - handler: apigee-handler
     instances:
@@ -36,22 +36,9 @@ metadata:
   name: secure-recommendations-rule
   namespace: istio-system
 spec:
-  match: context.reporter.kind == "inbound" && destination.namespace == "default" && destination.labels["app"] == "recommendationservice" 
+  match: context.reporter.kind == "inbound" && destination.labels["app"] == "recommendationservice"
   actions:
   - handler: apigee-handler
     instances:
     - apigee-analytics
-    - apigee-authorization    
----
-apiVersion: config.istio.io/v1alpha2
-kind: rule
-metadata:
-  name: secure-ads-rule
-  namespace: istio-system
-spec:
-  match: context.reporter.kind == "inbound" && destination.namespace == "default" && destination.labels["app"] == "adservice" 
-  actions:
-  - handler: apigee-handler
-    instances:
-    - apigee-analytics
-    - apigee-authorization       
+    - apigee-authorization
