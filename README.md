@@ -1,8 +1,8 @@
-# Hipster API Demo
+# Mini-Hipster API Demo
 
 This is a fork of the original Hipster APIM demo with the following changes:
 
-- Simplified microservices, reduced to 4 to reduce deployment footprint
+- Simplified microservices, reduced to 4 to reduce deployment footprint, rewritten in nodejs for simplification
 - Removed gRPC communication, replaced with HTTP
 - Replaced the manually installed Istio with the GKE Add-On Istio (in beta)
 - Removed Jaeger logging, replaced with Stackdriver
@@ -163,4 +163,4 @@ cartservice.default.svc.cluster.local
 
 ### KNOWN ISSUES
 
-
+* The *checkout* and *shopping-cart* services are not yet migrated to this project, so there is no shopping cart experience yet, only browsing products.
